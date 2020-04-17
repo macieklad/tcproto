@@ -14,3 +14,9 @@ func (c *channel) broadcast(s string, m []byte) {
 		cl.conn.Write(msg)
 	}
 }
+
+func newChannel(name string) *channel {
+	c := new(channel)
+	c.name = name
+	return c
+}

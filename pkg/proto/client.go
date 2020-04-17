@@ -79,7 +79,7 @@ func (c *client) reg(args []byte) error {
 }
 
 func (c *client) err(e error) {
-	c.conn.Write([]byte("ERR: " + e.Error() + "\n"))
+	c.conn.Write([]byte("ERR " + e.Error() + "\n"))
 }
 
 func (c *client) join(args []byte) error {
