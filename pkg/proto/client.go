@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 )
+
+var DELIMITER = []byte(`\r\n`)
 
 type client struct {
 	conn       net.Conn
@@ -16,7 +19,16 @@ type client struct {
 	username   string
 }
 
-func (c *client) read() error {
+func NewClient(conn net.Conn, o chan<- command, r chan<- *client, d chan<- *client) *client {
+	return &client{
+		conn:       conn,
+		outbound:   o,
+		register:   r,
+		deregister: d,
+	}
+}
+
+func (c *client) Read() error {
 	for {
 		msg, err := bufio.NewReader(c.conn).ReadBytes('\n')
 		if err == io.EOF {
@@ -91,6 +103,37 @@ func (c *client) leave(args []byte) error {
 }
 
 func (c *client) msg(args []byte) error {
+	args = bytes.TrimSpace(args)
+
+	if args[0] != '#' && args[0] != '@' {
+		return fmt.Errorf("recipient must be a channel ('#name') or user ('@user') ")
+	}
+
+	recipient := bytes.Split(args, []byte(" "))[0]
+	if len(recipient) == 0 {
+		return fmt.Errorf("recipient must have a name")
+	}
+
+	args = bytes.TrimSpace(bytes.TrimPrefix(args, recipient))
+	l := bytes.Split(args, DELIMITER)[0]
+	length, err := strconv.Atoi(string(l))
+	if err != nil {
+		return fmt.Errorf("body length must be present")
+	}
+	if length == 0 {
+		return fmt.Errorf("body length must be at least 1")
+	}
+
+	padding := len(l) + len(DELIMITER)
+	body := args[padding : padding+length]
+
+	c.outbound <- command{
+		recipient: string(recipient[1:]),
+		sender:    c.username,
+		body:      body,
+		id:        MSG,
+	}
+
 	return nil
 }
 

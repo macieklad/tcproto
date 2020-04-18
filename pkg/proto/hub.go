@@ -1,6 +1,8 @@
 package proto
 
-type hub struct {
+import "net"
+
+type Hub struct {
 	channels        map[string]*channel
 	clients         map[string]*client
 	commands        chan command
@@ -8,7 +10,26 @@ type hub struct {
 	registrations   chan *client
 }
 
-func (h *hub) run() {
+func NewHub() *Hub {
+	return &Hub{
+		registrations:   make(chan *client),
+		deregistrations: make(chan *client),
+		clients:         make(map[string]*client),
+		channels:        make(map[string]*channel),
+		commands:        make(chan command),
+	}
+}
+
+func (h *Hub) MakeClient(conn net.Conn) *client {
+	return NewClient(
+		conn,
+		h.commands,
+		h.registrations,
+		h.deregistrations,
+	)
+}
+
+func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.registrations:
@@ -34,7 +55,7 @@ func (h *hub) run() {
 	}
 }
 
-func (h *hub) register(c *client) {
+func (h *Hub) register(c *client) {
 	if _, exists := h.clients[c.username]; exists {
 		c.username = ""
 		c.conn.Write([]byte("ERR username taken \n"))
@@ -45,7 +66,7 @@ func (h *hub) register(c *client) {
 
 }
 
-func (h *hub) unregister(c *client) {
+func (h *Hub) unregister(c *client) {
 	if _, exists := h.clients[c.username]; exists {
 		delete(h.clients, c.username)
 
@@ -55,7 +76,7 @@ func (h *hub) unregister(c *client) {
 	}
 }
 
-func (h *hub) joinChannel(u string, c string) {
+func (h *Hub) joinChannel(u string, c string) {
 	if client, ok := h.clients[u]; ok {
 		if channel, ok := h.channels[c]; ok {
 			channel.clients[client] = true
@@ -66,18 +87,31 @@ func (h *hub) joinChannel(u string, c string) {
 	}
 }
 
-func (h *hub) leaveChannel(sender string, recipient string) {
+func (h *Hub) leaveChannel(sender string, recipient string) {
 
 }
 
-func (h *hub) message(sender string, recipient string, body []byte) {
+func (h *Hub) message(u string, r string, m []byte) {
+	if sender, ok := h.clients[u]; ok {
+		switch r[0] {
+		case '#':
+			if channel, ok := h.channels[r]; ok {
+				if _, ok := channel.clients[sender]; ok {
+					channel.broadcast(sender.username, m)
+				}
+			}
+		case '@':
+			if user, ok := h.clients[r]; ok {
+				user.conn.Write(append(m, '\n'))
+			}
+		}
+	}
+}
+
+func (h *Hub) listUsers(sender string) {
 
 }
 
-func (h *hub) listUsers(sender string) {
-
-}
-
-func (h *hub) listChannels(sender string) {
+func (h *Hub) listChannels(sender string) {
 
 }
