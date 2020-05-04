@@ -58,10 +58,10 @@ func (h *Hub) Run() {
 func (h *Hub) register(c *client) {
 	if _, exists := h.clients[c.username]; exists {
 		c.username = ""
-		c.conn.Write([]byte("ERR username taken \n"))
+		c.conn.Write(Error("username taken"))
 	} else {
 		h.clients[c.username] = c
-		c.conn.Write([]byte("OK\n"))
+		c.conn.Write(Ok())
 	}
 
 }
