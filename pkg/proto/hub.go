@@ -84,11 +84,16 @@ func (h *Hub) joinChannel(u string, c string) {
 			h.channels[c] = newChannel(c)
 			h.channels[c].clients[client] = true
 		}
+		client.conn.Write(Ok())
 	}
 }
 
-func (h *Hub) leaveChannel(sender string, recipient string) {
-
+func (h *Hub) leaveChannel(u string, c string) {
+	if client, ok := h.clients[u]; ok {
+		if channel, ok := h.channels[c]; ok {
+			delete(channel.clients, client)
+		}
+	}
 }
 
 func (h *Hub) message(u string, r string, m []byte) {
