@@ -90,17 +90,34 @@ func (c *client) reg(args []byte) error {
 	return nil
 }
 
-func (c *client) err(e error) {
-	c.conn.Write(Error(e.Error()))
-}
-
 func (c *client) join(args []byte) error {
+	channelID := bytes.TrimSpace(args)
+	if channelID[0] != '#' {
+		return fmt.Errorf("ERR Channel ID must begin with #")
+	}
+
+	c.outbound <- command{
+		recipient: string(channelID),
+		sender:    c.username,
+		id:        JOIN,
+	}
 	return nil
 }
 
 func (c *client) leave(args []byte) error {
+	channelID := bytes.TrimSpace(args)
+	if channelID[0] == '#' {
+		return fmt.Errorf("ERR channelID must start with '#'")
+	}
+
+	c.outbound <- command{
+		recipient: string(channelID),
+		sender:    c.username,
+		id:        LEAVE,
+	}
 	return nil
 }
+
 
 func (c *client) msg(args []byte) error {
 	args = bytes.TrimSpace(args)
@@ -138,9 +155,15 @@ func (c *client) msg(args []byte) error {
 }
 
 func (c *client) chns() {
-
+	c.outbound <- command{
+		sender: c.username,
+		id:     CHNS,
+	}
 }
 
 func (c *client) usrs() {
-
+	c.outbound <- command{
+		sender: c.username,
+		id:     USRS,
+	}
 }
