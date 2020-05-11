@@ -76,6 +76,11 @@ func (c *client) handle(message []byte) {
 
 func (c *client) reg(args []byte) error {
 	u := bytes.TrimSpace(args)
+
+	if len(u) == 0 {
+		return fmt.Errorf("There was no infromation with request")
+	}
+
 	if u[0] != '@' {
 		return fmt.Errorf("Username must start with @")
 	}
@@ -117,7 +122,6 @@ func (c *client) leave(args []byte) error {
 	}
 	return nil
 }
-
 
 func (c *client) msg(args []byte) error {
 	args = bytes.TrimSpace(args)
@@ -166,4 +170,8 @@ func (c *client) usrs() {
 		sender: c.username,
 		id:     USRS,
 	}
+}
+
+func (c *client) err(err error) {
+	c.conn.Write(Error(err.Error()))
 }
