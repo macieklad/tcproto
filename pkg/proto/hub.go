@@ -1,6 +1,9 @@
 package proto
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type Hub struct {
 	channels        map[string]*channel
@@ -113,10 +116,34 @@ func (h *Hub) message(u string, r string, m []byte) {
 	}
 }
 
-func (h *Hub) listUsers(sender string) {
+func (h *Hub) listChannels(u string) {
+	if client, ok := h.clients[u]; ok {
+		var names []string
 
+		if len(h.channels) == 0 {
+			client.conn.Write(Error("no channels found"))
+		}
+
+		for c := range h.channels {
+			names = append(names, c+" ")
+		}
+
+		resp := strings.Join(names, ", ")
+
+		client.conn.Write(OkMsg(resp))
+	}
 }
 
-func (h *Hub) listChannels(sender string) {
+func (h *Hub) listUsers(u string) {
+	if client, ok := h.clients[u]; ok {
+		var names []string
 
+		for c := range h.clients {
+			names = append(names, c+" ")
+		}
+
+		resp := strings.Join(names, ", ")
+
+		client.conn.Write(OkMsg(resp))
+	}
 }
